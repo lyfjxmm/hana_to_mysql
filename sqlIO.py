@@ -12,14 +12,15 @@ def comb_rows(row1, row2):
 
 class SQLOperating:
     def __init__(self):
+        # 数据库连接凭证初始化
         self.conn = None
         self.cursor = None
         self.config = {
-            'host': '192.168.201.217',
-            'user': 'lyf',
-            'password': '123123',
+            'host': '',
+            'user': '',
+            'password': '',
             'port': 3306,
-            'db': 'scyybfwq'
+            'db': ''
         }
 
     def get_conn(self):
@@ -31,13 +32,18 @@ class SQLOperating:
         self.conn.close()
 
     def create_db(self, table_name, hanadb_info):
-        # 组合建表sql语句
+        '''
+        组合建表sql语句,数据表结构来源于 hanaIO文件下的 get_hana_structure
+        '''
+
+        # 小数点数据在建表时使用的是 decimal(3,3) 如果没有小数点是 decimal(3) list第4,5项代表 长度和小数点位数
         sql_list = [
             f'''
             `{row[1]}` {row[2]}({comb_rows(row[3],row[4])}) DEFAULT {row[6]} COMMENT '{row[0]}'
             ''' for row in hanadb_info
         ]
-
+        # 比较粗糙的自动建表,数据类型只能是 varchar 和 decimal 
+        # 如果需要日期/时间，需要在上面的sql_list初始化那部分数据为对应的类型
         sql = f'''
             CREATE TABLE `{table_name}` (
             {','.join(sql_list)}
@@ -59,7 +65,9 @@ class SQLOperating:
                   table_name: str,
                   date_col: str,
                   start_date: str, end_date: str):
-        # 删除当天记录先
+        '''
+        根据列，删除记录，这里用的是根据日期列
+        '''
         del_sql = f'''
         delete from {table_name} 
         where 
@@ -104,7 +112,7 @@ class SQLOperating:
                     columns: list,
                     info: list):
         self.get_conn()
-        sql = f"INSERT INTO `scyybfwq`.`{table_name}` ({','.join(columns)}) VALUES ({','.join(['%s']*len(columns))})"
+        sql = f"INSERT INTO `{self.config.get('db')}`.`{table_name}` ({','.join(columns)}) VALUES ({','.join(['%s']*len(columns))})"
         try:
             self.cursor.executemany(sql, info)
             self.conn.commit()
